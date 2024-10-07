@@ -48,7 +48,7 @@ class TonCircle {
         for (let i = seconds; i >= 0; i--) {
             process.stdout.clearLine();
             process.stdout.cursorTo(0);
-            process.stdout.write(`===== Chờ ${i} giây để tiếp tục vòng lặp =====`);
+            process.stdout.write(`===== Waiting ${i} seconds to continue the loop =====`);
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
         console.log('');
@@ -201,17 +201,17 @@ class TonCircle {
                 if (startResult.success) {
                     const finalizeResult = await this.finalizeTask(authorization, task.id, type);
                     if (finalizeResult.success) {
-                        this.log(`Làm nhiệm vụ ${task.data.title} (${type}) thành công | phần thưởng : ${task.reward}`, 'success');
+                        this.log(`Successfully completed the task ${task.data.title} (${type}) | reward: ${task.reward}`, 'success');
                     } else {
-                        this.log(`Làm nhiệm vụ ${task.data.title} (${type}) không thành công | Cần tự làm`, 'error');
+                        this.log(`Failed to complete the task ${task.data.title} (${type}) | Need to do it manually`, 'error');
                     }
                 } else {
-                    this.log(`Không thể bắt đầu nhiệm vụ ${task.data.title} (${type}): ${startResult.error}`, 'error');
+                    this.log(`Cannot start the task ${task.data.title} (${type}): ${startResult.error}`, 'error');
                 }
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         } else {
-            this.log(`Không thể lấy danh sách nhiệm vụ ${type}: ${tasksResult.error}`, 'error');
+            this.log(`Cannot retrieve the task list ${type}: ${tasksResult.error}`, 'error');
         }
     }
 
@@ -300,35 +300,41 @@ class TonCircle {
     
             if (now < adWatchTime) {
                 const timeUntilNextAd = adWatchTime.diff(now).toFormat("hh:mm:ss");
-                this.log(`Thời gian xem quảng cáo tiếp theo: ${timeUntilNextAd}`, 'custom');
+                this.log(`Time until next ad: ${timeUntilNextAd}`, 'custom');
             } else {
                 const adResult = await this.getAd(tg_id);
                 if (adResult.success) {
-                    this.log('Bắt đầu xem quảng cáo...', 'custom');
+                    this.log('Starting to watch the ad...', 'custom');
                     const watchResult = await this.watchAd(adResult.data);
                     if (watchResult.success) {
-                        this.log('Xem quảng cáo thành công!', 'success');
+                        this.log('Ad watched successfully!', 'success');
                         const updatedProfileResult = await this.getProfile(authorization);
                         if (updatedProfileResult.success) {
                             const nextAdWatchTime = DateTime.fromISO(updatedProfileResult.data.adWatchTime, { zone: 'utc' })
                                 .setZone('local')
                                 .plus({ minutes: 2 });
                             const timeUntilNextAd = nextAdWatchTime.diff(now).toFormat("hh:mm:ss");
-                            this.log(`Thời gian xem quảng cáo tiếp theo: ${timeUntilNextAd}`, 'custom');
+                            this.log(`Time until the next ad: ${timeUntilNextAd}`, 'custom');
                         }
                     } else {
-                        this.log(`Lỗi khi xem quảng cáo: ${watchResult.error}`, 'error');
+                        this.log(`Error while watching the ad: ${watchResult.error}`, 'error');
                     }
                 } else {
-                    this.log(`Không thể lấy quảng cáo: ${adResult.error}`, 'error');
+                    this.log(`Cannot retrieve the ad: ${adResult.error}`, 'error');
                 }
             }
         } else {
-            this.log(`Không thể lấy thông tin tài khoản: ${profileResult.error}`, 'error');
+            this.log(`Cannot retrieve account information: ${profileResult.error}`, 'error');
         }
     }
 
     async main() {
+        const xTitle = "\n\x1b[1msparkscircle\x1b[0m";
+        const additionalText = "\nIf you use it, don't be afraid.\nIf you're afraid, don't use it.\nDo With Your Own Risk!\n";
+
+        console.log(xTitle.green);
+        console.log(additionalText.yellow);
+
         while (true) {
             const dataFile = path.join(__dirname, 'data.txt');
             const data = fs.readFileSync(dataFile, 'utf8')
@@ -343,16 +349,16 @@ class TonCircle {
                     const profileResult = await this.getProfile(authorization);
                     if (profileResult.success) {
                         const firstName = profileResult.data.firstName;
-                        console.log(`========== Tài khoản ${i + 1} | ${firstName.green} ==========`);
-                        this.log('Đăng nhập thành công!', 'success');
+                        console.log(`========== Account ${i + 1} | ${firstName.green} ==========`);
+                        this.log('Login successful!', 'success');
                         this.log(`Sparks Balance: ${profileResult.data.pointsBalance}`, 'custom');
                         this.log(`Circle Balance: ${profileResult.data.starsBalance}`, 'custom');
 
                         const bonusResult = await this.claimDailyBonus(authorization);
                         if (bonusResult.success) {
-                            this.log(`Điểm danh thành công!`, 'success');
+                            this.log(`Attendance successful!`, 'success');
                         } else {
-                            this.log(`Không thể nhận điểm danh hàng ngày: ${bonusResult.error}`, 'error');
+                            this.log(`Cannot claim daily attendance: ${bonusResult.error}`, 'error');
                         }
 
                         await this.processTasksOfType(authorization, 'regular');
@@ -363,30 +369,30 @@ class TonCircle {
 
                         const updatedProfileResult = await this.getProfile(authorization);
                         if (updatedProfileResult.success) {
-                            this.log(`Sparks có sẵn để spin: ${updatedProfileResult.data.pointsBalance}`, 'custom');
+                            this.log(`Sparks available to spin: ${updatedProfileResult.data.pointsBalance}`, 'custom');
                             if (updatedProfileResult.data.pointsBalance > 0) {
                                 const spinResult = await this.spin(authorization, updatedProfileResult.data.pointsBalance, 100);
                                 if (spinResult.success) {
-                                    this.log(`Spin thành công, nhận ${spinResult.data.winAmount} Circles`, 'success');
+                                    this.log(`Spin successful, received ${spinResult.data.winAmount} Circles`, 'success');
                                 } else {
-                                    this.log(`Không thể thực hiện spin: ${spinResult.error}`, 'error');
+                                    this.log(`Cannot perform spin: ${spinResult.error}`, 'error');
                                 }
                             }
                         } else {
-                            this.log(`Không thể lấy thông tin tài khoản cập nhật: ${updatedProfileResult.error}`, 'error');
+                            this.log(`Cannot retrieve updated account information: ${updatedProfileResult.error}`, 'error');
                         }
 
                     } else {
-                        this.log(`Không thể lấy thông tin tài khoản: ${profileResult.error}`, 'error');
+                        this.log(`Cannot retrieve account information: ${profileResult.error}`, 'error');
                     }
                 } else {
-                    this.log(`Đăng nhập không thành công! ${loginResult.error}`, 'error');
+                    this.log(`Login failed! ${loginResult.error}`, 'error');
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            this.log('Đã xử lý xong tất cả tài khoản. Nghỉ 150 giây trước khi tiếp tục vòng lặp.', 'warning');
+            this.log('All accounts have been processed. Resting for 150 seconds before continuing the loop.', 'warning');
             await this.countdown(150); 
         }
     }
